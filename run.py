@@ -5,7 +5,7 @@ from backend.evm_wrapper import BlindAuction, Pedersen
 rpc = "http://127.0.0.1:8545"
 
 perdesen = Pedersen(rpc_address=rpc,
-                    contract_file=Path("contracts/contract.sol"))
+                    contract_file=Path("contracts/contract.sol"))   # Solidity imp for perdersen method
 auction = BlindAuction(rpc_address=rpc,
                        contract_file=Path("contracts/contract.sol"))
 
@@ -35,12 +35,12 @@ perdesen.deploy(deploy_account=auctioneer_account)
 auction_params["pedersenAddress"] = perdesen.contact_address
 auction.deploy(**auction_params, deploy_account=auctioneer_account)
 
-py_perdesed = auction.pedersen
+py_perdesed = auction.pedersen  # Python imp for perdersen method
 
 
 def get_bs(number, value, r, W1W2):
-    return list(W1W2[4:])
-    # return [value + W1W2[4], r + W1W2[6], 1]
+    return list(W1W2[4:])  # B=0
+    # return [value + W1W2[4], r + W1W2[6], 1]  # B=1
 
 
 # create bids from users

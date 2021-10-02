@@ -235,15 +235,15 @@ contract BlindAuction {
         // Для рассчета бит
         uint8 bits_count = 0;
         while(i<response.length && j<commits.length) {
-            b = 0;
+            b = 0;  // Should be random
 
             // b = 0
             if(b == 0) {
                 // структура response = [w1, r1, w2, r2]
                 // структура commits = [коорд x точки W1, коорд y точки W1, коорд x точки W2, коорд y точки W2]
-                require((response[i] + response[i+2])%Q==V, "(response[i] + response[i+2])%Q==V");
+                require((response[i] + response[i+2])%Q==V, "(response[i] + response[i+2])%Q==V"); // I don't know why it is doesn't work
                 require(pedersen.Verify(response[i], response[i+1], commits[j], commits[j+1]), "Failed Verification stage for w1,r1 and commited W1 dot");
-                require(pedersen.Verify(response[i+2], response[i+3], commits[j+2], commits[j+3]), "Failed Verification stage for w2,r2 and commited W2 dot");
+                require(pedersen.Verify(response[i+2], response[i+3], commits[j+2], commits[j+3]), "Failed Verification stage for w2,r2 and commited W2 dot"); // Something went wrong here
                 i+=4;
             } else {
                 // b = 1
