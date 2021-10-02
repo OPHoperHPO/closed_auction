@@ -3,6 +3,7 @@ from typing import List
 import web3
 import eth_account
 from pathlib import Path
+from .crypto import PyPedersen
 from solcx import compile_source, install_solc
 
 install_solc(version="latest")
@@ -72,9 +73,34 @@ class Pedersen(BaseContractWrapper):
         self.contact_address = contract_address
         return contract_address
 
-    def get_dot(self, b: int, r: int):
+    @property
+    def q(self) -> int:
         contract = self.get_contract_by_address(self.contact_address)
-        return contract.functions.Commit(abs(b), abs(r)).call()  # TODO IT Shouldn't be abs!
+        return contract.functions.q().call()
+
+    @property
+    def gX(self) -> int:
+        contract = self.get_contract_by_address(self.contact_address)
+        return contract.functions.gX().call()
+
+    @property
+    def gY(self) -> int:
+        contract = self.get_contract_by_address(self.contact_address)
+        return contract.functions.gY().call()
+
+    @property
+    def hX(self) -> int:
+        contract = self.get_contract_by_address(self.contact_address)
+        return contract.functions.hX().call()
+
+    @property
+    def hY(self) -> int:
+        contract = self.get_contract_by_address(self.contact_address)
+        return contract.functions.hY().call()
+
+    def commit(self, b: int, r: int):
+        contract = self.get_contract_by_address(self.contact_address)
+        return contract.functions.Commit(b, r).call()
 
     def verify(self, b: int, r: int, cX: int, cY: int):
         contract = self.get_contract_by_address(self.contact_address)
@@ -194,11 +220,11 @@ class BlindAuction(BaseContractWrapper):
         return contract.functions.winner().call()
 
     @property
-    def pedersen(self) -> Pedersen:
+    def pedersen(self) -> PyPedersen:
         contract = self.get_contract_by_address(self.contact_address)
         ped = Pedersen(self.rpc_address, self.contract_file)
         ped.contact_address = contract.functions.getPedersenAddr().call()
-        return ped
+        return PyPedersen(ped.q, ped.gX, ped.gY, ped.hX, ped.hY)
 
     @property
     def highest_bid(self):
@@ -349,21 +375,6 @@ class BlindAuction(BaseContractWrapper):
                 gas_price=100000000000):
         contract = self.get_contract_by_address(self.contact_address)
         transaction = contract.functions.Destroy(
-        ).buildTransaction({
-            'gas': gas,
-            'gasPrice': gas_price,
-            'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
-        })
-        signed_txn = self.web3.eth.account.signTransaction(transaction,
-                                                           private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
-
-    def challenge_by_auctioneer(self, account: eth_account.account.LocalAccount,
-                                gas=4712388,
-                                gas_price=100000000000):
-        contract = self.get_contract_by_address(self.contact_address)
-        transaction = contract.functions.challengeByAuctioneer(
         ).buildTransaction({
             'gas': gas,
             'gasPrice': gas_price,

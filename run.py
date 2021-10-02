@@ -1,5 +1,4 @@
 from pathlib import Path
-import random
 
 from backend.evm_wrapper import BlindAuction, Pedersen
 
@@ -36,37 +35,34 @@ perdesen.deploy(deploy_account=auctioneer_account)
 auction_params["pedersenAddress"] = perdesen.contact_address
 auction.deploy(**auction_params, deploy_account=auctioneer_account)
 
+py_perdesed = auction.pedersen
 
-def get_bs(number, w1, w2, r1, r2, r, x):
-    return [x + w1, r + r1, 1]
+
+def get_bs(number, value, r, W1W2):
+    return list(W1W2[4:])
+    # return [value + W1W2[4], r + W1W2[6], 1]
 
 
 # create bids from users
-def create_bid(r, x, value=1000):
+def create_bid(value, r):
     result = []
     for account in users_accounts:
-        cX, cY = perdesen.get_dot(x, r)
+        cX, cY = py_perdesed.commit(value, r)
         auction.bid(cX, cY, value, account)
-        w1 = random.randint(0, auction.max_bid / 2)
-        w2 = w1 - auction.max_bid
-        r1 = random.randint(0, auction.max_bid / 2)
-        r2 = random.randint(0, auction.max_bid / 2)
-        W1x, W1y = perdesen.get_dot(w1, r1)
-        W2x, W2y = perdesen.get_dot(w2, r2)
-        result.append([account.address, w1, w2, r1, r2, r, x, W1x, W1y, W2x, W2y])
+        result.append([account.address, value, r])
         value += 2500
     return result
 
 
 def get_winner(results):
     for res in results:
-        acc_addr, w1, w2, r1, r2, r, x, W1x, W1y, W2x, W2y = res
-        auction.zkp_commit(acc_addr, [W1x, W1y, W2x, W2y], auctioneer_account)
+        acc_addr, value, r = res
+        reponse = py_perdesed.get_w1_w2()
+        auction.zkp_commit(acc_addr, reponse[:4], auctioneer_account)
         auction.zkp_verify(get_bs(  # TODO Something went wrong here
-            auction.number_zkp, w1, w2, r1, r2, r, x
-        ), auctioneer_account)
+            auction.number_zkp, value, r, reponse), auctioneer_account)
     auction.verify_all(auctioneer_account)
     print(f"Winner is {auction.winner}")
 
 
-get_winner(create_bid(2, 100, 2000))
+get_winner(create_bid(2000, 100))
