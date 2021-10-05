@@ -61,9 +61,9 @@ def get_winner(results):
         response[2], response[3] = get_W2(response[6], response[7])
         
         auction.zkp_commit(acc_addr, response[:4], auctioneer_account)
-        w_r_mpould = get_bs(auction.number_zkp, value, r, response)
-        w_r_mpould[2] = abs(w_r_mpould[2]) # Get absolute value of w2 
-        auction.zkp_verify_b_0(w_r_mpould, auctioneer_account)
+        w_r_mould = get_bs(auction.number_zkp, value, r, response)
+        w_r_mould[2] = abs(w_r_mould[2]) # Get absolute value of w2 
+        auction.zkp_verify_b_0(w_r_mould, auctioneer_account)
     print("Success in commit and verify")
     # auction.verify_all(auctioneer_account) TODO: Fix verify function in contract
     # print(f"Winner is {auction.winner}")
