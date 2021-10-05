@@ -3,13 +3,13 @@ pragma solidity >=0.7.0 <0.9.0;
 
 contract Pedersen {
     //uint public q =  21888242871839275222246405745257275088548364400416034343698204186575808495617;
-    int public q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
-    int public gX = 19823850254741169819033785099293761935467223354323761392354670518001715552183;
-    int public gY = 15097907474011103550430959168661954736283086276546887690628027914974507414020;
-    int public hX = 3184834430741071145030522771540763108892281233703148152311693391954704539228;
-    int public hY = 1405615944858121891163559530323310827496899969303520166098610312148921359100;
+    uint public q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+    uint public gX = 19823850254741169819033785099293761935467223354323761392354670518001715552183;
+    uint public gY = 15097907474011103550430959168661954736283086276546887690628027914974507414020;
+    uint public hX = 3184834430741071145030522771540763108892281233703148152311693391954704539228;
+    uint public hY = 1405615944858121891163559530323310827496899969303520166098610312148921359100;
 
-    constructor(int _q, int _gX, int _gY, int _hX, int _hY ) { // Добавлено изменение значений простых чисел
+    constructor(uint _q, uint _gX, uint _gY, uint _hX, uint _hY ) { // Добавлено изменение значений простых чисел
         q = _q;
         gX = _gX;
         gY = _gY;
@@ -17,19 +17,30 @@ contract Pedersen {
         hY = _hY;
     }
 
-    function Commit(int b, int r) public returns (int cX, int cY) {
-        (int cX1, int cY1) = ecMul(b, gX, gY);
-        (int cX2, int cY2) = ecMul(r, hX, hY);
+    function Commit(uint b, uint r) public returns (uint cX, uint cY) {
+        (uint cX1, uint cY1) = ecMul(b, gX, gY);
+        (uint cX2, uint cY2) = ecMul(r, hX, hY);
         return(ecAdd(cX1, cY1, cX2, cY2));
     }
-    function Verify(int b, int r, int cX, int cY) public returns (bool) {
-        (int cX2, int cY2) = Commit(b,r);
+    function Verify(uint b, uint r, uint cX, uint cY) public returns (bool) {
+        (uint cX2, uint cY2) = Commit(b,r);
         return cX == cX2 && cY == cY2;
     }
-    function CommitDelta(int cX1, int cY1, int cX2, int cY2) public returns (int cX, int cY) {
-        (cX, cY) = ecAdd(cX1, cY1, cX2, q-cY2);
+    function CommitNeg(uint b, uint r) public returns (uint cX, uint cY) {
+        // b = w2
+        (uint gX_temp, uint gY_temp) = ecInv(gX, gY, q);
+        (uint cX1, uint cY1) = ecMul(b, gX_temp, gY_temp);
+        (uint cX2, uint cY2) = ecMul(r, hX, hY);
+        (cX, cY) = ecAdd(cX1, cY1, cX2, cY2);
     }
-    function ecMul(int b, int cX1, int cY1) private returns (int cX2, int cY2) {
+    function VerifyNeg(uint b, uint r, uint cX, uint cY) public returns (bool) {
+        (uint cX2, uint cY2) = CommitNeg(b,r);
+        return cX == cX2 && cY == cY2;
+    }
+    function ecInv(uint _x, uint _y, uint _prime) internal pure returns (uint, uint) {  // internal
+        return (_x, (_prime - _y) % _prime);
+    }
+    function ecMul(uint b, uint cX1, uint cY1) private returns (uint cX2, uint cY2) {
         bool success = false;
         bytes memory input = new bytes(96);
         bytes memory output = new bytes(64);
@@ -43,7 +54,7 @@ contract Pedersen {
         }
         require(success);
     }
-    function ecAdd(int cX1, int cY1, int cX2, int cY2) public returns (int cX3, int cY3) {
+    function ecAdd(uint cX1, uint cY1, uint cX2, uint cY2) public returns (uint cX3, uint cY3) {
         bool success = false;
         bytes memory input = new bytes(128);
         bytes memory output = new bytes(64);
@@ -89,8 +100,8 @@ contract AuctionsBox{
 contract BlindAuction {
     enum VerificationStates {Init, Challenge,ChallengeDelta, Verify, VerifyDelta, ValidWinner}
     struct Bidder {
-        int commitX;
-        int commitY;
+        uint commitX;
+        uint commitY;
         bytes cipher;
         bool validProofs;
         bool paidBack;
@@ -103,9 +114,9 @@ contract BlindAuction {
     uint private challengeBlockNumber;
     bool private testing; //for fast testing without checking block intervals
     uint8 private K = 10; //number of multiple rounds per ZKP
-    int public Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
-    int public V = 5472060717959818805561601436314318772174077789324455915672259473661306552145;
-    int[] commits;
+    uint public Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+    uint public V = 5472060717959818805561601436314318772174077789324455915672259473661306552145;
+    uint[] commits;
     mapping(address => Bidder) public bidders;
     address[] public indexs;
     uint mask =1;
@@ -189,7 +200,7 @@ contract BlindAuction {
     function getPedersenAddr() public returns(address) {
         return(address(pedersen));
     }
-    function Bid(int cX, int cY) public payable {
+    function Bid(uint cX, uint cY) public payable {
         require(block.number < bidBlockNumber || testing);   //during bidding Interval
         require(indexs.length < maxBiddersCount); //available slot
         require(msg.value >= fairnessFees);  //paying fees
@@ -203,7 +214,7 @@ contract BlindAuction {
         bidders[msg.sender].cipher = cipher;
     }
 
-    function ZKPCommit(address y, int[] memory _commits) public challengeByAuctioneer {
+    function ZKPCommit(address y, uint[] memory _commits) public challengeByAuctioneer {
         require(states == VerificationStates.Challenge || testing);
         require(_commits.length == K *4);
         require(bidders[y].existing == true); // existing bidder
@@ -222,15 +233,15 @@ contract BlindAuction {
         return (_number >> _k) & 1;
     }
 
-    function ZKPVerify(int[] memory response) public challengeByAuctioneer {
+    function ZKPVerify(uint[] memory response) public challengeByAuctioneer {
         require(states == VerificationStates.Verify || states == VerificationStates.VerifyDelta);
         uint8 count = 0;
         //uint hash = uint(block.blockhash(challengeBlockNumber));
         // mask = 1;
         uint i = 0;
         uint j = 0;
-        int cX;
-        int cY;
+        uint cX;
+        uint cY;
         uint8 b;
         // Для рассчета бит
         uint8 bits_count = 0;
@@ -311,12 +322,27 @@ contract BlindAuction {
         require(states == VerificationStates.Init);
         require(bidders[_winner].existing == true); //existing bidder
         require(_bid < uint(V)); //valid bid
-        require(pedersen.Verify(int(_bid), int(_r), bidders[_winner].commitX, bidders[_winner].commitY)); //valid open of winner's commit
+        require(pedersen.Verify(uint(_bid), uint(_r), bidders[_winner].commitX, bidders[_winner].commitY)); //valid open of winner's commit
         winner = _winner;
         highestBid = _bid;
         states = VerificationStates.Challenge;
     }
 
+    function ZKPVerify_Case_b_0(uint _w1, uint _r1, uint _w2, uint _r2) public {
+        // b = 0
+        
+        require(states == VerificationStates.Verify || states == VerificationStates.VerifyDelta || testing);
+
+        uint j = 0;
+        // структура response = [w1, r1, w2, r2]
+        // структура commits = [коорд x точки W1, коорд y точки W1, коорд x точки W2, коорд y точки W2]
+
+        require( (_w1+_w2)%Q == maxBid, "Does not mathc");
+        require(pedersen.Verify(_w1, _r1, commits[j], commits[j+1]), "W1 and R1");
+        require(pedersen.VerifyNeg(_w2, _r2, commits[j+2], commits[j+3]), "W2 and R2");
+        
+        bidders[msg.sender].validProofs = true;
+    }
 
     function Withdraw() public payable {
         require(states == VerificationStates.ValidWinner || block.number>winnerPaymentBlockNumber);

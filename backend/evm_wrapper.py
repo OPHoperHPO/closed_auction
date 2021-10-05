@@ -5,6 +5,7 @@ import eth_account
 from pathlib import Path
 from .crypto import PyPedersen
 from solcx import compile_source, install_solc
+import codecs
 
 install_solc(version="latest")
 
@@ -24,7 +25,8 @@ class BaseContractWrapper:
             with open(sol_file) as f:
                 src = f.read()
         elif isinstance(sol_file, Path):
-            src = sol_file.read_text()
+            file = codecs.open( "contracts/contract.sol", "r", "utf-8" )
+            src = file.read()
         else:
             raise NotImplemented("Unknown type of input sol filepath")
         compiled_sol = compile_source(src, optimize=True, allow_paths=[Path("./")])
@@ -64,11 +66,11 @@ class Pedersen(BaseContractWrapper):
                 'gas': gas,
                 'gasPrice': gas_price,
                 'from': deploy_account.address,
-                'nonce': self.web3.eth.get_transaction_count(deploy_account.address, "pending")
+                'nonce': self.web3.eth.getTransactionCount(deploy_account.address, "pending")
             })
         signed_txn = self.web3.eth.account.signTransaction(tx_hash, private_key=deploy_account.privateKey)
         contract_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-        contract_tx_info = self.web3.eth.wait_for_transaction_receipt(contract_hash)
+        contract_tx_info = self.web3.eth.waitForTransactionReceipt(contract_hash)
         contract_address = contract_tx_info["contractAddress"]
         self.contact_address = contract_address
         return contract_address
@@ -152,12 +154,12 @@ class BlindAuction(BaseContractWrapper):
                 'gas': gas,
                 'gasPrice': gas_price,
                 'from': deploy_account.address,
-                'nonce': self.web3.eth.get_transaction_count(deploy_account.address, "pending"),
+                'nonce': self.web3.eth.getTransactionCount(deploy_account.address, "pending"),
                 "value": eth_pay_value
             })
         signed_txn = self.web3.eth.account.signTransaction(tx_hash, private_key=deploy_account.privateKey)
         contract_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-        contract_tx_info = self.web3.eth.wait_for_transaction_receipt(contract_hash)
+        contract_tx_info = self.web3.eth.waitForTransactionReceipt(contract_hash)
         contract_address = contract_tx_info["contractAddress"]
         self.contact_address = contract_address
         return contract_address
@@ -242,12 +244,12 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
             "value": bid_amount_wei
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def reveal(self, cipher: bytes,
                account: eth_account.account.LocalAccount,
@@ -260,11 +262,11 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def zkp_commit(self, y: str,
                    commits: List[int],
@@ -278,11 +280,11 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def zkp_verify(self,
                    response: List[int],
@@ -296,11 +298,29 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+
+    def zkp_verify_b_0(self,
+                   response: List[int],
+                   account: eth_account.account.LocalAccount,
+                   gas=4712388,
+                   gas_price=100000000000):
+        contract = self.get_contract_by_address(self.contact_address)
+        transaction = contract.functions.ZKPVerify_Case_b_0(
+            response[0], response[1], response[2], response[3]
+        ).buildTransaction({
+            'gas': gas,
+            'gasPrice': gas_price,
+            'from': account.address,
+            'nonce': self.web3.eth.getTransactionCount(account.address),
+        })
+        signed_txn = self.web3.eth.account.signTransaction(transaction,
+                                                           private_key=account.privateKey)
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def verify_all(self,
                    account: eth_account.account.LocalAccount,
@@ -312,11 +332,11 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def claim_winner(self,
                      winner: str,
@@ -332,11 +352,11 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def withdraw(self, account: eth_account.account.LocalAccount,
                  gas=4712388,
@@ -347,12 +367,12 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
             'value': 1
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def winner_pay(self, account: eth_account.account.LocalAccount,
                    gas=4712388,
@@ -363,12 +383,12 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
             'value': 1
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
 
     def destroy(self, account: eth_account.account.LocalAccount,
                 gas=4712388,
@@ -379,8 +399,8 @@ class BlindAuction(BaseContractWrapper):
             'gas': gas,
             'gasPrice': gas_price,
             'from': account.address,
-            'nonce': self.web3.eth.get_transaction_count(account.address),
+            'nonce': self.web3.eth.getTransactionCount(account.address),
         })
         signed_txn = self.web3.eth.account.signTransaction(transaction,
                                                            private_key=account.privateKey)
-        return self.web3.eth.wait_for_transaction_receipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))
+        return self.web3.eth.waitForTransactionReceipt(self.web3.eth.sendRawTransaction(signed_txn.rawTransaction))

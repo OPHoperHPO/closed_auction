@@ -37,6 +37,17 @@ class PyPedersen:
         """
         C = (x * self.G) + (r * self.H)
         return C.x, C.y
+    
+    def commit_neg(self, x: int, r: int):
+        """
+        C = -x*G + r*H
+        :param x: ставка в WEI
+        :param r: любое число
+        :return Cx, Cy
+        """
+        G_temp = self.G
+        C = (x * G_temp) + (r * self.H)
+        return C.x, C.y
 
     def verify(self, x, r, cX, cY) -> bool:
         cX2, cY2 = self.commit(x, r)
@@ -50,9 +61,9 @@ class PyPedersen:
 
     def get_w1_w2(self):
         w1 = random.randint(0, self.B / 2)
-        w2 = w1 - self.B
+        w2 = abs(w1 - self.B)
         r1 = random.randint(0, self.B / 2)
         r2 = random.randint(0, self.B / 2)
         W1 = self.commit(w1, r1)
-        W2 = self.commit(w2, r2)
+        W2 = self.commit_neg(w2, r2)
         return W1[0], W1[1], W2[0], W2[1], w1, r1, w2, r2

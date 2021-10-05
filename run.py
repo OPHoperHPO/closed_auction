@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from backend.fix_crypto import get_W2
 from backend.evm_wrapper import BlindAuction, Pedersen
 
 rpc = "http://127.0.0.1:8545"
@@ -10,7 +10,7 @@ auction = BlindAuction(rpc_address=rpc,
                        contract_file=Path("contracts/contract.sol"))
 
 auctioneer_account = perdesen.web3.eth.account.privateKeyToAccount(
-    "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d")
+    "0x558749ca47b6f117a08695340b9db74ac978900e2629dcdee2c27a34f31d3a9f")
 
 private_keys = open("keys").read().split("\n")
 users_accounts = list(map(perdesen.web3.eth.account.privateKeyToAccount, private_keys))
@@ -57,12 +57,16 @@ def create_bid(value, r):
 def get_winner(results):
     for res in results:
         acc_addr, value, r = res
-        reponse = py_perdesed.get_w1_w2()
-        auction.zkp_commit(acc_addr, reponse[:4], auctioneer_account)
-        auction.zkp_verify(get_bs(  # TODO Something went wrong here
-            auction.number_zkp, value, r, reponse), auctioneer_account)
-    auction.verify_all(auctioneer_account)
-    print(f"Winner is {auction.winner}")
+        response = list(py_perdesed.get_w1_w2())
+        response[2], response[3] = get_W2(response[6], response[7])
+        
+        auction.zkp_commit(acc_addr, response[:4], auctioneer_account)
+        w_r_mpould = get_bs(auction.number_zkp, value, r, response)
+        w_r_mpould[2] = abs(w_r_mpould[2]) # Get absolute value of w2 
+        auction.zkp_verify_b_0(w_r_mpould, auctioneer_account)
+    print("Success in commit and verify")
+    # auction.verify_all(auctioneer_account) TODO: Fix verify function in contract
+    # print(f"Winner is {auction.winner}")
 
 
 get_winner(create_bid(2000, 100))
